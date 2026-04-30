@@ -1,249 +1,341 @@
-# EasyR1: An Efficient, Scalable, Multi-Modality RL Training Framework
+# EasyR1 Math RLVR: 小算力数学后训练机制分析
 
-[![GitHub Repo stars](https://img.shields.io/github/stars/hiyouga/EasyR1)](https://github.com/hiyouga/EasyR1/stargazers)
-[![Twitter](https://img.shields.io/twitter/follow/llamafactory_ai)](https://twitter.com/llamafactory_ai)
-[![Docker Pulls](https://img.shields.io/docker/pulls/hiyouga/verl)](https://hub.docker.com/r/hiyouga/verl/tags)
+本项目基于 [EasyR1](https://github.com/hiyouga/EasyR1) / veRL 构建数学推理 RLVR 后训练实验链路，目标是在真实小算力约束下分析 RLVR 收益来源，而不是复现 DeepSeek-R1 或训练 SOTA 数学模型。
 
-### Used by [Amazon Web Services](https://aws.amazon.com/cn/blogs/china/building-llm-model-hub-based-on-llamafactory-and-easyr1/)
+核心问题：
 
-This project is a clean fork of the original [veRL](https://github.com/volcengine/verl) project to support vision language models, we thank all the authors for providing such a high-performance RL training framework.
+```text
+在 2xA10 + Qwen2.5-3B-Instruct + LoRA 条件下，
+数学 RLVR 的收益来自算法选择、reward 设计、format 约束、数据过滤、
+采样策略，还是 checkpoint selection？
+```
 
-EasyR1 is efficient and scalable due to the design of **[HybirdEngine](https://arxiv.org/abs/2409.19256)** and the latest release of **[vLLM](https://github.com/vllm-project/vllm)**'s SPMD mode.
+实际使用模型统一表述为 `Qwen2.5-3B-Instruct`。部分历史脚本文件名包含 `1_5b`，但实验运行时通过 `MODEL_PATH` 指向 3B Instruct 模型。
 
-## Features
+## 技术栈
 
-- Supported models
-  - Llama3/Qwen2/Qwen2.5/Qwen3 language models
-  - Qwen2-VL/Qwen2.5-VL/Qwen3-VL vision language models
-  - DeepSeek-R1 distill models
+```text
+EasyR1 / veRL
+Ray
+vLLM
+LoRA
+Docker
+W&B
+Qwen2.5-3B-Instruct
+Math12K / GSM8K
+```
 
-- Supported algorithms
-  - GRPO
-  - DAPO ![new](https://img.shields.io/badge/new-orange)
-  - Reinforce++
-  - ReMax
-  - RLOO
-  - GSPO ![new](https://img.shields.io/badge/new-orange)
-  - CISPO ![new](https://img.shields.io/badge/new-orange)
+训练与评测流程：
 
-- Supported datasets
-  - Any text, vision-text dataset in a [specific format](#custom-dataset)
+```text
+Math12K problem
+-> prompt template
+-> vLLM rollout
+-> rule-based verifier reward
+-> GRPO / GSPO advantage
+-> actor policy update
+-> validation and checkpoint selection
+-> best-of-N / cross-benchmark / verifier audit
+```
 
-- Supported tricks
-  - Padding-free training
-  - LoRA training ![new](https://img.shields.io/badge/new-orange)
-  - Resuming from the latest/best checkpoint
-  - Wandb & SwanLab & Mlflow & Tensorboard tracking
+## 数据与 Reward
 
-## Requirements
+主数据集：
 
-### Software Requirements
+```text
+hiyouga/math12k
+train: 12000
+test: 500
+```
 
-- Python 3.9+
-- transformers>=4.54.0
-- flash-attn>=2.4.3
-- vllm>=0.8.3
+本项目使用 RLVR 数据契约，而不是 SFT 数据契约：
 
-We provide a [Dockerfile](./Dockerfile) to easily build environments.
+```text
+problem -> actor rollout prompt
+answer  -> verifier-only gold label
+```
 
-We recommend using the [pre-built docker image](https://hub.docker.com/r/hiyouga/verl) in EasyR1.
+模型不会把 gold answer 当作监督目标看到。gold answer 只用于 rule-based verifier 给采样结果打分。
+
+训练 reward 保持简单：
+
+```text
+R_train = 0.9 * answer_accuracy + 0.1 * format
+```
+
+`V2-lite` 只用于离线诊断，不参与训练：
+
+```text
+diagnostic_score_v2_lite =
+  0.85 * answer_accuracy
++ 0.10 * format
++ 0.05 * answer_extractable
+- 0.10 * invalid_output_penalty
+```
+
+Math12K verifier-aware profiling 结果：
+
+| item | value |
+|---|---:|
+| train rows | 12000 |
+| test rows | 500 |
+| train/test problem overlap | 0 |
+| train duplicate pair rows | 2 |
+| train empty gold answers | 2 |
+| train over-max-prompt examples | 9 |
+| test over-max-prompt examples | 0 |
+| train verifier-ready rate | 84.91% |
+| test verifier-ready rate | 84.20% |
+
+结论：Math12K 是可验证数据集，但不是 reward-noise-free 数据集。约 15% 样本存在 symbolic/text gold、possible multi-answer、complex LaTeX、empty gold、long gold 或 overlong prompt 等 verifier 风险。
+
+## 实验矩阵
+
+已完成 A10 主实验：
+
+| run | purpose |
+|---|---|
+| Base | Qwen2.5-3B-Instruct 原始能力基线 |
+| GRPO-composite | answer accuracy + format 主线 RLVR |
+| GSPO | 算法对比 |
+| GRPO-filtered | online filtering / 数据过滤对比 |
+| GRPO-answer-only | 去掉 format shaping 的 reward ablation |
+| best-of-N | 评估采样候选分布质量 |
+| GSM8K greedy | 跨基准 sanity check |
+| V2-lite rescoring | 离线诊断 answer extraction / truncation / repetition |
+| verifier audit | 人工审计 verifier 可靠性 |
+
+## 核心结果
+
+训练期验证集结果：
+
+| model/run | accuracy | format rate | train_reward_v1 | notes |
+|---|---:|---:|---:|---|
+| Base | 0.404 | 0.020 | 0.3656 | Qwen2.5-3B-Instruct |
+| GRPO-composite step150 | 0.520 | 0.632 | 0.5312 | best checkpoint |
+| GRPO-composite step300 | 0.502 | 0.664 | 0.5182 | final checkpoint |
+| GSPO step150 | 0.484 | 0.518 | 0.4874 | algorithm comparison |
+| GRPO-filtered step150 | 0.504 | 0.702 | 0.5238 | higher format, lower accuracy than GRPO-composite |
+| GRPO-answer-only step150 | 0.506 | 0.530 | 0.5060 | answer-only reward |
+
+独立 Math12K test-500 P0 评测：
+
+| run | greedy | best-of-4 | best-of-8 |
+|---|---:|---:|---:|
+| Base | 0.426 | 0.560 | 0.602 |
+| GRPO-composite | 0.458 | 0.578 | 0.636 |
+| GSPO | 0.426 | 0.554 | 0.604 |
+| GRPO-answer-only | 0.416 | 0.560 | 0.600 |
+
+GSM8K cross-benchmark sanity check：
+
+| run | GSM8K greedy |
+|---|---:|
+| Base | 0.790 |
+| GRPO-composite | 0.768 |
+
+结论必须保持克制：GRPO-composite 提升了 Math12K in-domain 表现和 best-of-N 候选分布，但 GSM8K 有轻微下降，不能声称泛化能力全面提升。
+
+## Checkpoint Stability
+
+GRPO-composite 的最佳 checkpoint 是 `step150`，不是最终 `step300`。
+
+```text
+step150:
+accuracy: 0.520
+format_rate: 0.632
+train_reward_v1: 0.5312
+mean_response_length: 367.01
+
+step300:
+accuracy: 0.502
+format_rate: 0.664
+train_reward_v1: 0.5182
+mean_response_length: 353.92
+```
+
+这说明小算力 LoRA RLVR 中 checkpoint selection 是核心评估环节。继续训练不一定更好，format rate 提升也可能伴随 answer accuracy 回落。
+
+## Verifier Audit 与失败模式
+
+人工审计：
+
+```text
+audited examples: 100
+verifier-human agreement: 93.0%
+false positive count: 0
+false negative count: 7
+```
+
+人工错误分析 50 条样本：
+
+| category | count |
+|---|---:|
+| overlong reasoning or truncation | 21 |
+| verifier false negative | 13 |
+| wrong problem understanding | 5 |
+| algebra transformation error | 5 |
+| arithmetic error | 3 |
+| reasoning shortcut | 2 |
+| repetition | 1 |
+
+主要失败链路：
+
+```text
+overlong reasoning
+-> truncation
+-> missing or malformed boxed final answer
+-> answer extraction failure
+-> zero reward / verifier false negative
+```
+
+因此后续闭环改进方向不是盲目堆训练，而是 verifier-aware clean data、concise final-answer prompt、stop-after-boxed postprocess，以及更稳健的离线 verifier 诊断。
+
+## 复现环境
+
+推荐使用与 A10 实验一致的 Docker 镜像：
 
 ```bash
 docker pull hiyouga/verl:ngc-th2.8.0-cu12.9-vllm0.11.0
-docker run -it --ipc=host --gpus=all hiyouga/verl:ngc-th2.8.0-cu12.9-vllm0.11.0
+
+docker run -it --ipc=host --gpus=all \
+  -v /path/to/EasyR1:/workspace/EasyR1 \
+  -v /path/to/models:/models \
+  -w /workspace/EasyR1 \
+  hiyouga/verl:ngc-th2.8.0-cu12.9-vllm0.11.0
 ```
 
-If your environment does not support Docker, you can consider using **Apptainer**:
+容器内检查：
 
 ```bash
-apptainer pull easyr1.sif docker://hiyouga/verl:ngc-th2.8.0-cu12.9-vllm0.11.0
-apptainer shell --nv --cleanenv --bind /mnt/your_dir:/mnt/your_dir easyr1.sif
+cd /workspace/EasyR1
+python3 - <<'PY'
+import torch, transformers, ray, vllm
+print("torch", torch.__version__)
+print("cuda", torch.cuda.is_available())
+print("gpu", torch.cuda.get_device_name(0))
+print("transformers", transformers.__version__)
+print("ray", ray.__version__)
+print("vllm", vllm.__version__)
+PY
 ```
 
-Use `USE_MODELSCOPE_HUB=1` to download models from the ModelScope hub.
+## 最小复现命令
 
-### Hardware Requirements
+所有命令都应从仓库根目录执行，并通过 `MODEL_PATH` 指向本地 Qwen2.5-3B-Instruct。
 
-\* *estimated*
-
-| Method                   | Bits |  1.5B  |   3B   |   7B   |   32B   |   72B   |
-| ------------------------ | ---- | ------ | ------ | ------ | ------- | ------- |
-| GRPO Full Fine-Tuning    |  AMP | 2*24GB | 4*40GB | 8*40GB | 16*80GB | 32*80GB |
-| GRPO Full Fine-Tuning    | BF16 | 1*24GB | 1*40GB | 4*40GB |  8*80GB | 16*80GB |
-| GRPO LoRA Fine-Tuning    |  AMP | 1*12GB | 1*24GB | 2*32GB |  2*80GB |  4*80GB |
-
-> [!NOTE]
-> Use `worker.actor.fsdp.torch_dtype=bf16` and `worker.actor.optim.strategy=adamw_bf16` to enable bf16 training.
-
-## Tutorial: Run Qwen2.5-VL GRPO on [Geometry3K](https://huggingface.co/datasets/hiyouga/geometry3k) Dataset in Just 3 Steps
-
-![image](assets/qwen2_5_vl_7b_geo.png)
-
-### Installation
+Base eval：
 
 ```bash
-git clone https://github.com/hiyouga/EasyR1.git
-cd EasyR1
-pip install -e .
+MODEL_PATH=/path/to/Qwen2.5-3B-Instruct \
+SINGLE_GPU_ID=0 \
+SUITE_MODE=base \
+bash examples/run_reasoning_rl_suite_a10.sh
 ```
 
-### GRPO Full Training
+GRPO smoke：
 
 ```bash
-bash examples/qwen2_5_vl_7b_geo3k_grpo.sh
+MODEL_PATH=/path/to/Qwen2.5-3B-Instruct \
+SINGLE_GPU_ID=0 \
+SUITE_MODE=grpo_smoke \
+bash examples/run_reasoning_rl_suite_a10.sh
 ```
 
-### GRPO LoRA Training
+GRPO-composite full run：
 
 ```bash
-bash examples/qwen3_vl_4b_geo3k_grpo_lora.sh
+MODEL_PATH=/path/to/Qwen2.5-3B-Instruct \
+GPU_IDS=0,1 \
+MAX_STEPS=300 \
+SUITE_MODE=grpo \
+bash examples/run_reasoning_rl_suite_a10.sh
 ```
 
-### Merge Checkpoint in Hugging Face Format
+P0 analysis：
 
 ```bash
-python3 scripts/model_merger.py --local_dir checkpoints/easy_r1/exp_name/global_step_1/actor
+MODEL_PATH=/path/to/Qwen2.5-3B-Instruct \
+SINGLE_GPU_ID=0 \
+GRPO_LORA=checkpoints/easyr1_reasoning/qwen2_5_1_5b_math_grpo_a10/global_step_150/actor/lora_adapter \
+GSPO_LORA=checkpoints/easyr1_reasoning/qwen2_5_1_5b_math_gspo_a10/global_step_150/actor/lora_adapter \
+ANSWER_ONLY_LORA=checkpoints/easyr1_reasoning/qwen2_5_1_5b_math_grpo_answer_only_a10/global_step_150/actor/lora_adapter \
+bash scripts/run_p0_reasoning_analysis_a10.sh
 ```
 
-> [!TIP]
-> If you encounter issues with connecting to Hugging Face, consider using `export HF_ENDPOINT=https://hf-mirror.com`.
->
-> If you want to use SwanLab logger, consider using `bash examples/qwen2_5_vl_7b_geo3k_swanlab.sh`.
-
-## Custom Dataset
-
-Please refer to the example datasets to prepare your own dataset.
-
-- Text dataset: https://huggingface.co/datasets/hiyouga/math12k
-- Image-text dataset: https://huggingface.co/datasets/hiyouga/geometry3k
-- Multi-image-text dataset: https://huggingface.co/datasets/hiyouga/journeybench-multi-image-vqa
-- Text-image mixed dataset: https://huggingface.co/datasets/hiyouga/rl-mixed-dataset
-
-## How to Understand GRPO in EasyR1
-
-![image](assets/easyr1_grpo.png)
-
-- To learn about the GRPO algorithm, you can refer to [Hugging Face's blog](https://huggingface.co/docs/trl/v0.16.1/en/grpo_trainer).
-
-## How to Run 70B+ Model in Multi-node Environment
-
-1. Start the Ray head node.
+Clean-concise 闭环实验入口：
 
 ```bash
-ray start --head --port=6379 --dashboard-host=0.0.0.0
+MODEL_PATH=/path/to/Qwen2.5-3B-Instruct \
+GPU_ID=0 \
+MAX_STEPS=150 \
+N_GENERATIONS=4 \
+ROLLOUT_BATCH_SIZE=32 \
+GLOBAL_BATCH_SIZE=16 \
+MAX_RESPONSE_LENGTH=512 \
+bash scripts/run_a100_clean_concise_project.sh
 ```
 
-2. Start the Ray worker node and connect to the head node.
+## 结果与产物
 
-```bash
-ray start --address=<head_node_ip>:6379
+小型 summary/report 可随代码提交，例如：
+
+```text
+imported_results_20260425/results/reasoning_rl_all_runs_compare.txt
+imported_results_20260425/results/checkpoint_stability_report.json
+imported_results_20260425/results/best_of_n_eval_report.json
+imported_results_20260425/results/cross_benchmark_eval_report.json
+imported_results_20260425/results/reward_v2_rescoring_report.json
+imported_results_20260425/results/human_audit_summary.json
 ```
 
-3. Check the Ray resource pool.
+大体积原始产物不进入 git，包括：
 
-```bash
-ray status
+```text
+logs/
+checkpoints/
+results/*.jsonl
+imported_results_20260425/results/*.jsonl
+easyr1_results_20260425.tar.gz
 ```
 
-4. Run training script on the Ray head node only.
+文档资产：
 
-```bash
-bash examples/qwen2_5_vl_7b_geo3k_grpo.sh
+```text
+docs/reasoning_rlvr_report.md              # 完整项目报告
+docs/reasoning_rlvr_resume_package_zh.md   # 简历描述与 2 分钟讲稿
+docs/reasoning_rlvr_qa_bank_zh.md          # 高频面试问答
+docs/reasoning_rlvr_interview_script.md    # 英文面试讲稿
+docs/a100_handoff_plan_zh.md               # 后续大卡实验交接
+docs/reasoning_rlvr_a100_extension_plan_zh.md
 ```
 
-See the **[veRL's official doc](https://verl.readthedocs.io/en/latest/start/multinode.html)** for more details about multi-node training and Ray debugger.
+## 局限性
 
-## Other Baselines
-
-We also reproduced the following two baselines of the [R1-V](https://github.com/deep-agent/R1-V) project.
-- [CLEVR-70k-Counting](examples/baselines/qwen2_5_vl_3b_clevr.sh): Train the Qwen2.5-VL-3B-Instruct model on counting problem.
-- [GeoQA-8k](examples/baselines/qwen2_5_vl_3b_geoqa8k.sh): Train the Qwen2.5-VL-3B-Instruct model on GeoQA problem.
-
-## Performance Baselines
-
-See [baselines.md](assets/baselines.md).
-
-## Awesome Work using EasyR1
-
-- **MMR1**: Enhancing Multimodal Reasoning with Variance-Aware Sampling and Open Resources. [![[code]](https://img.shields.io/github/stars/LengSicong/MMR1)](https://github.com/LengSicong/MMR1) [![[arxiv]](https://img.shields.io/badge/arxiv-2509.21268-blue)](https://arxiv.org/abs/2509.21268)
-- **Vision-R1**: Incentivizing Reasoning Capability in Multimodal Large Language Models. [![[code]](https://img.shields.io/github/stars/Osilly/Vision-R1)](https://github.com/Osilly/Vision-R1) [![[arxiv]](https://img.shields.io/badge/arxiv-2503.06749-blue)](https://arxiv.org/abs/2503.06749)
-- **Seg-Zero**: Reasoning-Chain Guided Segmentation via Cognitive Reinforcement. [![[code]](https://img.shields.io/github/stars/dvlab-research/Seg-Zero)](https://github.com/dvlab-research/Seg-Zero) [![[arxiv]](https://img.shields.io/badge/arxiv-2503.06520-blue)](https://arxiv.org/abs/2503.06520)
-- **MetaSpatial**: Reinforcing 3D Spatial Reasoning in VLMs for the Metaverse. [![[code]](https://img.shields.io/github/stars/PzySeere/MetaSpatial)](https://github.com/PzySeere/MetaSpatial) [![[arxiv]](https://img.shields.io/badge/arxiv-2503.18470-blue)](https://arxiv.org/abs/2503.18470)
-- **Temporal-R1**: Envolving Temporal Reasoning Capability into LMMs via Temporal Consistent Reward. [![[code]](https://img.shields.io/github/stars/appletea233/Temporal-R1)](https://github.com/appletea233/Temporal-R1) [![[arxiv]](https://img.shields.io/badge/arxiv-2506.01908-blue)](https://arxiv.org/abs/2506.01908)
-- **NoisyRollout**: Reinforcing Visual Reasoning with Data Augmentation. [![[code]](https://img.shields.io/github/stars/John-AI-Lab/NoisyRollout)](https://github.com/John-AI-Lab/NoisyRollout) [![[arxiv]](https://img.shields.io/badge/arxiv-2504.13055-blue)](https://arxiv.org/pdf/2504.13055)
-- **GUI-R1**: A Generalist R1-Style Vision-Language Action Model For GUI Agents. [![[code]](https://img.shields.io/github/stars/ritzz-ai/GUI-R1)](https://github.com/ritzz-ai/GUI-R1) [![[arxiv]](https://img.shields.io/badge/arxiv-2504.10458-blue)](https://arxiv.org/abs/2504.10458)
-- **FAST-GRPO**: Fast-Slow Thinking framework that dynamically adapts reasoning depth based on question characteristics. [![[code]](https://img.shields.io/github/stars/Mr-Loevan/FAST)](https://github.com/Mr-Loevan/FAST) [![[arxiv]](https://img.shields.io/badge/arxiv-2504.18458-blue)](https://arxiv.org/abs/2504.18458)
-- **R1-Track**: Direct Application of MLLMs to Visual Object Tracking via Reinforcement Learning. [![[code]](https://img.shields.io/github/stars/Wangbiao2/R1-Track)](https://github.com/Wangbiao2/R1-Track)
-- **VisionReasoner**: Unified Visual Perception and Reasoning via Reinforcement Learning. [![[code]](https://img.shields.io/github/stars/dvlab-research/VisionReasoner)](https://github.com/dvlab-research/VisionReasoner) [![[arxiv]](https://img.shields.io/badge/arxiv-2505.12081-blue)](https://arxiv.org/abs/2505.12081)
-- **MM-UPT**: Unsupervised Post-Training for Multi-Modal LLM Reasoning via GRPO. [![[code]](https://img.shields.io/github/stars/waltonfuture/MM-UPT)](https://github.com/waltonfuture/MM-UPT) [![[arxiv]](https://img.shields.io/badge/arxiv-2505.22453-blue)](https://arxiv.org/pdf/2505.22453)
-- **RL-with-Cold-Start**: Advancing Multimodal Reasoning via Reinforcement Learning with Cold Start. [![[code]](https://img.shields.io/github/stars/waltonfuture/RL-with-Cold-Start)](https://github.com/waltonfuture/RL-with-Cold-Start) [![[arxiv]](https://img.shields.io/badge/arxiv-2505.22334-blue)](https://arxiv.org/pdf/2505.22334)
-- **ViGoRL**: Grounded Reinforcement Learning for Visual Reasoning. [![[code]](https://img.shields.io/github/stars/Gabesarch/grounded-rl)](https://github.com/Gabesarch/grounded-rl) [![[arxiv]](https://img.shields.io/badge/arxiv-2505.22334-blue)](https://arxiv.org/abs/2505.23678)
-- **Revisual-R1**: Advancing Multimodal Reasoning: From Optimized Cold Start to Staged Reinforcement Learning. [![[code]](https://img.shields.io/github/stars/CSfufu/Revisual-R1)](https://github.com/CSfufu/Revisual-R1) [![[arxiv]](https://img.shields.io/badge/arxiv-2506.04207-blue)](https://arxiv.org/abs/2506.04207)
-- **SophiaVL-R1**: Reinforcing MLLMs Reasoning with Thinking Reward. [![[code]](https://img.shields.io/github/stars/kxfan2002/SophiaVL-R1)](https://github.com/kxfan2002/SophiaVL-R1) [![[arxiv]](https://img.shields.io/badge/arxiv-2505.17018-blue)](https://arxiv.org/abs/2505.17018)
-- **Vision-Matters**: Simple Visual Perturbations Can Boost Multimodal Math Reasoning. [![[code]](https://img.shields.io/github/stars/YutingLi0606/Vision-Matters)](https://github.com/YutingLi0606/Vision-Matters) [![[arxiv]](https://img.shields.io/badge/arxiv-2506.09736-blue)](https://arxiv.org/abs/2506.09736)
-- **VTool-R1**: VLMs Learn to Think with Images via Reinforcement Learning on Multimodal Tool Use. [![[code]](https://img.shields.io/github/stars/VTOOL-R1/vtool-r1)](https://github.com/VTOOL-R1/vtool-r1) [![[arxiv]](https://img.shields.io/badge/arxiv-2505.19255-blue)](https://arxiv.org/abs/2505.19255)
-- **Long-RL**: Scaling RL to Long Sequences. [![[code]](https://img.shields.io/github/stars/NVlabs/Long-RL)](https://github.com/NVlabs/Long-RL) [![[arxiv]](https://img.shields.io/badge/arxiv-2507.07966-blue)](https://arxiv.org/abs/2507.07966)
-- **EditGRPO**: Reinforcement Learning with Post-Rollout Edits for Clinically Accurate Chest X-Ray Report Generation. [![[code]](https://img.shields.io/github/stars/taokz/EditGRPO)](https://github.com/taokz/EditGRPO)
-- **ARES**: Multimodal Adaptive Reasoning via Difficulty-Aware Token-Level Entropy Shaping. [![[code]](https://img.shields.io/github/stars/shawn0728/ARES)](https://github.com/shawn0728/ARES) [![[arxiv]](https://img.shields.io/badge/arxiv-2510.08457-blue)](https://arxiv.org/abs/2510.08457)
-- **VPPO**: Spotlight on Token Perception for Multimodal Reinforcement Learning. [![[code]](https://img.shields.io/github/stars/huaixuheqing/VPPO-RL)](https://github.com/huaixuheqing/VPPO-RL) [![[arxiv]](https://img.shields.io/badge/arxiv-2510.09285-blue)](https://arxiv.org/abs/2510.09285)
-- **IE-Critic-R1**: Advancing the Explanatory Measurement of Text-Driven Image Editing for Human Perception Alignment. [![[code]](https://img.shields.io/github/stars/Coobiw/IE-Critic-R1)](https://github.com/Coobiw/IE-Critic-R1) [![[arxiv]](https://img.shields.io/badge/arxiv-2511.18055-blue)](https://arxiv.org/abs/2511.18055)
-- **OneThinker**: All-in-one Reasoning Model for Image and Video. [![[code]](https://img.shields.io/github/stars/tulerfeng/OneThinker)](https://github.com/tulerfeng/OneThinker) [![[arxiv]](https://img.shields.io/badge/arxiv-2512.03043-blue)](https://arxiv.org/abs/2512.03043)
-- **MetaphorStar**: Image Metaphor Understanding and Reasoning with End-to-End Visual Reinforcement Learning. [![[code]](https://img.shields.io/github/stars/MING-ZCH/MetaphorStar)](https://github.com/MING-ZCH/MetaphorStar) [![[arxiv]](https://img.shields.io/badge/arxiv-2602.10575-blue)](https://arxiv.org/abs/2602.10575)
-
-## TODO
-
-- Support ulysses parallelism for VLMs (middle priority).
-- Support more VLM architectures.
-
-> [!NOTE]
-> We will not provide scripts for supervised fine-tuning and inference in this project. If you have such requirements, we recommend using [LlamaFactory](https://github.com/hiyouga/LlamaFactory).
-
-### Known bugs
-
-These features are temporarily disabled for now, we plan to fix them one-by-one in the future updates.
-
-- Vision language models are not compatible with ulysses parallelism yet.
-
-## Discussion Group
-
-👋 Join our [WeChat group](https://github.com/hiyouga/llamafactory-community/blob/main/wechat/easyr1.jpg).
-
-## FAQs
-
-> ValueError: Image features and image tokens do not match: tokens: 8192, features 9800
-
-Increase the `data.max_prompt_length` or reduce the `data.max_pixels`.
-
-> RuntimeError: CUDA Error: out of memory at /workspace/csrc/cumem_allocator.cpp:62
-
-Reduce the `worker.rollout.gpu_memory_utilization` and enable `worker.actor.offload.offload_params`.
-
-> RuntimeError: 0 active drivers ([]). There should only be one.
-
-Uninstall `deepspeed` from the current python environment.
-
-## Citation
-
-Core contributors: [Yaowei Zheng](https://github.com/hiyouga), [Junting Lu](https://github.com/AL-377), [Shenzhi Wang](https://github.com/Shenzhi-Wang), [Zhangchi Feng](https://github.com/BUAADreamer), [Dongdong Kuang](https://github.com/Kuangdd01), Yuwen Xiong and Richong Zhang
-
-We also thank Guangming Sheng and Chi Zhang for helpful discussions.
-
-```bibtex
-@misc{zheng2025easyr1,
-  title        = {EasyR1: An Efficient, Scalable, Multi-Modality RL Training Framework},
-  author       = {Yaowei Zheng, Junting Lu, Shenzhi Wang, Zhangchi Feng, Dongdong Kuang, Yuwen Xiong, Richong Zhang},
-  howpublished = {\url{https://github.com/hiyouga/EasyR1}},
-  year         = {2025}
-}
+```text
+小模型：Qwen2.5-3B-Instruct
+小算力：2xA10
+LoRA 而非全参 RL
+训练步数有限
+rule-based outcome verifier only
+没有 process reward
+没有把 SFT vs RLVR 作为问题定义
+没有声称泛化全面提升
 ```
 
-We recommend to also cite the original work.
+本项目的正确简历口径：
 
-```bibtex
-@article{sheng2024hybridflow,
-  title   = {HybridFlow: A Flexible and Efficient RLHF Framework},
-  author  = {Guangming Sheng and Chi Zhang and Zilingfeng Ye and Xibin Wu and Wang Zhang and Ru Zhang and Yanghua Peng and Haibin Lin and Chuan Wu},
-  year    = {2024},
-  journal = {arXiv preprint arXiv: 2409.19256}
-}
+```text
+基于 EasyR1/veRL 构建小算力数学 RLVR 后训练系统，
+系统分析 GRPO/GSPO、reward ablation、checkpoint stability、best-of-N、
+verifier audit 和 failure analysis。
+```
+
+不要包装成：
+
+```text
+复现 DeepSeek-R1
+训练出 SOTA 数学模型
+证明 GRPO 普遍优于 GSPO
+证明模型数学能力全面提升
 ```

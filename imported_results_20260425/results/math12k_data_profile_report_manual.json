@@ -1,0 +1,238 @@
+{
+  "dataset_name": "hiyouga/math12k",
+  "data_contract": {
+    "actor_input": "problem",
+    "verifier_only_gold": "answer",
+    "format_prompt": "examples/format_prompt/math.jinja",
+    "max_prompt_length": 1024,
+    "note": "Gold answers are not used for teacher forcing; they are labels for rule-based verifier rewards."
+  },
+  "tokenizer_path": "/home/wzy/migrate/autodl-tmp/models/Qwen2.5-3B-Instruct",
+  "tokenizer_error": null,
+  "train": {
+    "num_rows": 12000,
+    "topic_distribution": {
+      "other": 3478,
+      "geometry": 2256,
+      "number_theory": 2066,
+      "combinatorics": 1425,
+      "algebra": 1182,
+      "arithmetic": 964,
+      "probability": 320,
+      "sequence": 309
+    },
+    "difficulty_distribution": {
+      "hard": 4838,
+      "easy": 4484,
+      "medium": 2678
+    },
+    "answer_type_distribution": {
+      "integer": 7499,
+      "latex_fraction": 1896,
+      "text_or_symbolic": 876,
+      "other_expression": 567,
+      "sqrt_expression": 437,
+      "power_expression": 369,
+      "decimal": 190,
+      "symbolic_constant": 159,
+      "plain_fraction": 3,
+      "empty": 2,
+      "none_or_no_solution": 2
+    },
+    "verifier_risk_distribution": {
+      "clean": 10189,
+      "symbolic_or_text_gold": 1602,
+      "possible_multi_answer": 712,
+      "complex_latex_gold": 283,
+      "long_gold_answer": 59,
+      "over_max_prompt_tokens": 9,
+      "empty_gold_answer": 2,
+      "none_or_no_solution_gold": 2
+    },
+    "verifier_ready_rate": 0.8490833333333333,
+    "lengths": {
+      "prompt_chars": {
+        "count": 12000,
+        "min": 231,
+        "p50": 360.5,
+        "p90": 618.0,
+        "p95": 779.0,
+        "p99": 1211.0,
+        "max": 4524,
+        "mean": 417.8971666666667
+      },
+      "prompt_tokens": {
+        "count": 12000,
+        "min": 51,
+        "p50": 92.0,
+        "p90": 188.0,
+        "p95": 268.0,
+        "p99": 473.0,
+        "max": 1698,
+        "mean": 116.77608333333333
+      },
+      "answer_chars": {
+        "count": 12000,
+        "min": 0,
+        "p50": 3.0,
+        "p90": 14.0,
+        "p95": 19.0,
+        "p99": 45.0,
+        "max": 159,
+        "mean": 6.30675
+      },
+      "max_prompt_length": 1024,
+      "over_max_prompt_tokens": 9
+    }
+  },
+  "val": {
+    "num_rows": 500,
+    "topic_distribution": {
+      "other": 148,
+      "geometry": 83,
+      "number_theory": 79,
+      "combinatorics": 66,
+      "algebra": 57,
+      "arithmetic": 38,
+      "sequence": 16,
+      "probability": 13
+    },
+    "difficulty_distribution": {
+      "hard": 206,
+      "easy": 165,
+      "medium": 129
+    },
+    "answer_type_distribution": {
+      "integer": 311,
+      "latex_fraction": 68,
+      "text_or_symbolic": 42,
+      "other_expression": 25,
+      "power_expression": 23,
+      "sqrt_expression": 20,
+      "symbolic_constant": 6,
+      "decimal": 5
+    },
+    "verifier_risk_distribution": {
+      "clean": 421,
+      "symbolic_or_text_gold": 73,
+      "possible_multi_answer": 28,
+      "complex_latex_gold": 11,
+      "long_gold_answer": 1
+    },
+    "verifier_ready_rate": 0.842,
+    "lengths": {
+      "prompt_chars": {
+        "count": 500,
+        "min": 235,
+        "p50": 363.0,
+        "p90": 600.1,
+        "p95": 727.1999999999998,
+        "p99": 946.1599999999999,
+        "max": 1948,
+        "mean": 410.892
+      },
+      "prompt_tokens": {
+        "count": 500,
+        "min": 52,
+        "p50": 94.0,
+        "p90": 185.10000000000002,
+        "p95": 245.0999999999999,
+        "p99": 386.05999999999995,
+        "max": 835,
+        "mean": 114.94
+      },
+      "answer_chars": {
+        "count": 500,
+        "min": 1,
+        "p50": 3.0,
+        "p90": 13.0,
+        "p95": 17.049999999999955,
+        "p99": 46.0,
+        "max": 53,
+        "mean": 5.932
+      },
+      "max_prompt_length": 1024,
+      "over_max_prompt_tokens": 0
+    }
+  },
+  "duplicates": {
+    "train": {
+      "duplicate_problem_rows": 2,
+      "duplicate_pair_rows": 2,
+      "duplicate_problem_examples": [
+        {
+          "problem_hash": "de029c3261edfbb9",
+          "count": 2
+        },
+        {
+          "problem_hash": "f8c4188be8cac1e7",
+          "count": 2
+        }
+      ],
+      "duplicate_pair_examples": [
+        {
+          "pair_hash": "8bf6ed469b953681",
+          "count": 2
+        },
+        {
+          "pair_hash": "2e0264f70ea004b2",
+          "count": 2
+        }
+      ]
+    },
+    "val": {
+      "duplicate_problem_rows": 0,
+      "duplicate_pair_rows": 0,
+      "duplicate_problem_examples": [],
+      "duplicate_pair_examples": []
+    }
+  },
+  "train_val_leakage": {
+    "train_unique_problem_hashes": 11998,
+    "val_unique_problem_hashes": 500,
+    "overlap_problem_count": 0,
+    "overlap_problem_hashes": []
+  },
+  "eval_subset": {
+    "split": "test",
+    "num_rows": 500,
+    "selection": "deterministic first N rows from the validation split, matching the P0 eval protocol.",
+    "topic_distribution": {
+      "other": 148,
+      "geometry": 83,
+      "number_theory": 79,
+      "combinatorics": 66,
+      "algebra": 57,
+      "arithmetic": 38,
+      "sequence": 16,
+      "probability": 13
+    },
+    "difficulty_distribution": {
+      "hard": 206,
+      "easy": 165,
+      "medium": 129
+    },
+    "answer_type_distribution": {
+      "integer": 311,
+      "latex_fraction": 68,
+      "text_or_symbolic": 42,
+      "other_expression": 25,
+      "power_expression": 23,
+      "sqrt_expression": 20,
+      "symbolic_constant": 6,
+      "decimal": 5
+    },
+    "verifier_risk_distribution": {
+      "clean": 421,
+      "symbolic_or_text_gold": 73,
+      "possible_multi_answer": 28,
+      "complex_latex_gold": 11,
+      "long_gold_answer": 1
+    }
+  },
+  "artifacts": {
+    "manifest_output": "results/math12k_data_manifest_manual.jsonl",
+    "eval_subset_output": "results/math12k_eval_subset_manifest_manual.jsonl",
+    "sample_output": "results/math12k_stratified_data_samples_manual.jsonl"
+  }
+}

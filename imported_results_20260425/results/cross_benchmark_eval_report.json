@@ -1,0 +1,53 @@
+{
+  "description": "Cross-benchmark reports. GSM8K is P0; MATH500 is P1 optional.",
+  "reports": [
+    {
+      "model_path": "/home/wzy/migrate/autodl-tmp/models/Qwen2.5-3B-Instruct",
+      "lora_path": null,
+      "dataset_name": "openai/gsm8k",
+      "dataset_config": "main",
+      "dataset_split": "test",
+      "limit": 500,
+      "n": 1,
+      "temperature": 0.0,
+      "top_p": 1.0,
+      "count": 500,
+      "greedy_accuracy": 0.79,
+      "best_of_N_accuracy": 0.79,
+      "pass_at_k": 0.79,
+      "maj_at_k": 0.794,
+      "format_at_k": 0.512,
+      "selected_train_reward_v1": 0.762199999999998,
+      "selected_diagnostic_score_v2_lite": 0.6724000000000019,
+      "mean_response_length": 511.05,
+      "output_file": "results/base_gsm8k_greedy.jsonl",
+      "_report_file": "results/base_gsm8k_greedy_report.json",
+      "run_name": "base",
+      "metric_family": "greedy"
+    },
+    {
+      "model_path": "/home/wzy/migrate/autodl-tmp/models/Qwen2.5-3B-Instruct",
+      "lora_path": "checkpoints/easyr1_reasoning/qwen2_5_1_5b_math_grpo_a10/global_step_150/actor/lora_adapter",
+      "dataset_name": "openai/gsm8k",
+      "dataset_config": "main",
+      "dataset_split": "test",
+      "limit": 500,
+      "n": 1,
+      "temperature": 0.0,
+      "top_p": 1.0,
+      "count": 500,
+      "greedy_accuracy": 0.768,
+      "best_of_N_accuracy": 0.768,
+      "pass_at_k": 0.768,
+      "maj_at_k": 0.778,
+      "format_at_k": 0.582,
+      "selected_train_reward_v1": 0.7493999999999986,
+      "selected_diagnostic_score_v2_lite": 0.6612000000000018,
+      "mean_response_length": 511.02,
+      "output_file": "results/grpo_composite_gsm8k_greedy.jsonl",
+      "_report_file": "results/grpo_composite_gsm8k_greedy_report.json",
+      "run_name": "grpo_composite",
+      "metric_family": "greedy"
+    }
+  ]
+}

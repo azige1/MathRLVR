@@ -1,0 +1,21 @@
+{
+  "model_path": "/home/wzy/migrate/autodl-tmp/models/Qwen2.5-3B-Instruct",
+  "lora_path": null,
+  "dataset_name": "hiyouga/math12k",
+  "dataset_config": null,
+  "dataset_split": "test",
+  "limit": 200,
+  "n": 1,
+  "temperature": 0.0,
+  "top_p": 1.0,
+  "count": 200,
+  "greedy_accuracy": 0.34,
+  "best_of_N_accuracy": 0.34,
+  "pass_at_k": 0.34,
+  "maj_at_k": 0.34,
+  "format_at_k": 0.215,
+  "selected_train_reward_v1": 0.32749999999999985,
+  "selected_diagnostic_score_v2_lite": 0.25674999999999976,
+  "mean_response_length": 1023.09,
+  "output_file": "results/base_math12k_greedy_1024tok_200.jsonl"
+}

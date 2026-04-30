@@ -1,0 +1,21 @@
+{
+  "model_path": "/home/wzy/migrate/autodl-tmp/models/Qwen2.5-3B-Instruct",
+  "lora_path": "checkpoints/easyr1_reasoning/qwen2_5_1_5b_math_gspo_a10/global_step_150/actor/lora_adapter",
+  "dataset_name": "hiyouga/math12k",
+  "dataset_config": null,
+  "dataset_split": "test",
+  "limit": 500,
+  "n": 1,
+  "temperature": 0.0,
+  "top_p": 1.0,
+  "count": 500,
+  "greedy_accuracy": 0.426,
+  "best_of_N_accuracy": 0.426,
+  "pass_at_k": 0.426,
+  "maj_at_k": 0.42,
+  "format_at_k": 0.134,
+  "selected_train_reward_v1": 0.396800000000001,
+  "selected_diagnostic_score_v2_lite": 0.3019000000000017,
+  "mean_response_length": 511.514,
+  "output_file": "results/gspo_math12k_greedy.jsonl"
+}

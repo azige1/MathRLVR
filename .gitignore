@@ -174,11 +174,31 @@ cython_debug/
 *.pt
 
 # outputs
-outputs/
-checkpoints/
+/outputs/
+/checkpoints/
+/logs/
 wandb/
 tensorboard_log/
+/results/
+docs/archive/
+imported_results_*/logs/
+imported_results_*/docs/
+imported_results_*/results/*.jsonl
+imported_results_*/results/*.csv
+imported_results_*/results/*.compact.json
+imported_results_*/results/*_sheet*
+imported_results_*/results/*_samples*
+imported_results_*/results/*_manifest*
+imported_results_*/results/*rescored_outputs*
+imported_results_*/results/*_summary.txt
+imported_results_*/scripts/
+scripts/setup_a10_env.sh
+scripts/sync_reasoning_rlvr_to_a10.sh
+*.tar
+*.tar.gz
+*.tgz
 
 # data
+data/
 images/
 images*

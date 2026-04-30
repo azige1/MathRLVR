@@ -1,0 +1,33 @@
+{
+  "error_analysis": {
+    "count": 50,
+    "human_error_type_counts": {
+      "reasoning shortcut": 2,
+      "verifier false negative": 13,
+      "overlong reasoning or truncation": 21,
+      "wrong problem understanding": 5,
+      "arithmetic error": 3,
+      "algebra transformation error": 5,
+      "repetition": 1
+    }
+  },
+  "verifier_audit": {
+    "count": 100,
+    "human_audit_label_counts": {
+      "correct_reject": 11,
+      "correct_accept": 34,
+      "truncation": 45,
+      "wrong_reject": 7,
+      "repetition": 3
+    },
+    "verifier_correct_count": 93,
+    "verifier_incorrect_count": 7,
+    "verifier_human_agreement": 0.93,
+    "false_positive_count": 0,
+    "false_negative_count": 7
+  },
+  "notes": [
+    "Labels are conservative: a response is marked wrong_reject only when the correct answer is explicitly present or directly boxed-equivalent.",
+    "Many correct_accept rows still have truncation=1 because the model often continues generating after an answer; this is tracked as a generation-control risk, not necessarily an accuracy error."
+  ]
+}

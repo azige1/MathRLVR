@@ -1,0 +1,169 @@
+{
+  "dataset_name": "hiyouga/math12k",
+  "prompt_key": "problem",
+  "answer_key": "answer",
+  "format_prompt": "examples/format_prompt/math.jinja",
+  "tokenizer_path": "/home/wzy/migrate/autodl-tmp/models/Qwen2.5-3B-Instruct",
+  "train": {
+    "split": "train",
+    "num_rows": 12000,
+    "field_checks": {
+      "missing_prompt_key": 0,
+      "missing_answer_key": 0,
+      "empty_prompt": 0,
+      "empty_answer": 2
+    },
+    "duplicates": {
+      "duplicate_problem_rows": 2,
+      "duplicate_problem_answer_rows": 2
+    },
+    "lengths": {
+      "problem_chars": {
+        "count": 12000,
+        "min": 16,
+        "p50": 145.5,
+        "p90": 403.0,
+        "p95": 564.0,
+        "p99": 996.0,
+        "max": 4309,
+        "mean": 202.89716666666666
+      },
+      "rendered_prompt_chars": {
+        "count": 12000,
+        "min": 231,
+        "p50": 360.5,
+        "p90": 618.0,
+        "p95": 779.0,
+        "p99": 1211.0,
+        "max": 4524,
+        "mean": 417.8971666666667
+      },
+      "answer_chars": {
+        "count": 12000,
+        "min": 0,
+        "p50": 3.0,
+        "p90": 14.0,
+        "p95": 19.0,
+        "p99": 45.0,
+        "max": 159,
+        "mean": 6.30675
+      },
+      "rendered_prompt_tokens": {
+        "count": 12000,
+        "min": 51,
+        "p50": 92.0,
+        "p90": 188.0,
+        "p95": 268.0,
+        "p99": 473.0,
+        "max": 1698,
+        "mean": 116.77608333333333
+      },
+      "over_max_prompt_length": 9,
+      "max_prompt_length": 1024,
+      "tokenizer_error": null
+    },
+    "answer_types": {
+      "integer": 7499,
+      "latex_fraction": 1896,
+      "text_or_symbolic": 885,
+      "other_expression": 567,
+      "sqrt_expression": 437,
+      "power_expression": 369,
+      "decimal": 190,
+      "symbolic_constant": 152,
+      "plain_fraction": 3,
+      "empty": 2
+    }
+  },
+  "val": {
+    "split": "test",
+    "num_rows": 500,
+    "field_checks": {
+      "missing_prompt_key": 0,
+      "missing_answer_key": 0,
+      "empty_prompt": 0,
+      "empty_answer": 0
+    },
+    "duplicates": {
+      "duplicate_problem_rows": 0,
+      "duplicate_problem_answer_rows": 0
+    },
+    "lengths": {
+      "problem_chars": {
+        "count": 500,
+        "min": 20,
+        "p50": 148.0,
+        "p90": 385.1,
+        "p95": 512.1999999999998,
+        "p99": 731.1599999999999,
+        "max": 1733,
+        "mean": 195.892
+      },
+      "rendered_prompt_chars": {
+        "count": 500,
+        "min": 235,
+        "p50": 363.0,
+        "p90": 600.1,
+        "p95": 727.1999999999998,
+        "p99": 946.1599999999999,
+        "max": 1948,
+        "mean": 410.892
+      },
+      "answer_chars": {
+        "count": 500,
+        "min": 1,
+        "p50": 3.0,
+        "p90": 13.0,
+        "p95": 17.049999999999955,
+        "p99": 46.0,
+        "max": 53,
+        "mean": 5.932
+      },
+      "rendered_prompt_tokens": {
+        "count": 500,
+        "min": 52,
+        "p50": 94.0,
+        "p90": 185.10000000000002,
+        "p95": 245.0999999999999,
+        "p99": 386.05999999999995,
+        "max": 835,
+        "mean": 114.94
+      },
+      "over_max_prompt_length": 0,
+      "max_prompt_length": 1024,
+      "tokenizer_error": null
+    },
+    "answer_types": {
+      "integer": 311,
+      "latex_fraction": 68,
+      "text_or_symbolic": 42,
+      "other_expression": 25,
+      "power_expression": 23,
+      "sqrt_expression": 20,
+      "symbolic_constant": 6,
+      "decimal": 5
+    }
+  },
+  "train_val_leakage": {
+    "train_unique_problem_hashes": 11998,
+    "val_unique_problem_hashes": 500,
+    "overlap_problem_count": 0,
+    "overlap_examples": []
+  },
+  "duplicate_examples": [
+    {
+      "split": "train",
+      "hash": "8bf6ed469b953681",
+      "count": 2,
+      "problem": "Real numbers $x$ and $y$ satisfy the equation $x^2 + y^2 = 10x - 6y - 34$.  What is $x+y$?",
+      "answer": "2"
+    },
+    {
+      "split": "train",
+      "hash": "2e0264f70ea004b2",
+      "count": 2,
+      "problem": "The points $(0,0)\\,$, $(a,11)\\,$, and $(b,37)\\,$ are the vertices of an equilateral triangle. Find the value of $ab\\,$.",
+      "answer": "315"
+    }
+  ]
+}

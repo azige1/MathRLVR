@@ -1,0 +1,17 @@
+# EasyR1 Math RLVR Run Comparison
+
+## Base
+| model | accuracy | format_rate | train_reward_v1 | count |
+|---|---:|---:|---:|---:|
+| base | 0.4040 | 0.0200 | 0.3656 | 500 |
+
+## RL Runs
+| run | best_step | accuracy | format_rate | train_reward_v1 | mean_response_length | last_step | accuracy_drop_from_best |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| grpo_composite | 150 | 0.5200 | 0.6320 | 0.5312 | 367.0109 | 300 | 0.0180 |
+| gspo | 150 | 0.4840 | 0.5180 | 0.4874 | 392.4653 | 150 | 0.0000 |
+| grpo_filtered | 150 | 0.5040 | 0.7020 | 0.5238 | 343.0486 | 150 | 0.0000 |
+| grpo_answer_only | 150 | 0.5060 | 0.5300 | 0.5060 | 393.8974 | 150 | 0.0000 |
+| grpo_format_only | - | - | - | - | - | - | - |
+
+Note: `train_reward_v1` is the training verifier score. It should not be mixed with `diagnostic_score_v2_lite` from offline rescoring.

@@ -1,0 +1,69 @@
+{
+  "score_definition": {
+    "train_reward_v1": "0.9 * answer_accuracy + 0.1 * format_rate",
+    "diagnostic_score_v2_lite": "0.85 * answer_accuracy + 0.10 * format_rate + 0.05 * answer_extractable - 0.10 * invalid_output_penalty",
+    "invalid_output_penalty": "1 iff output is likely truncated or has severe repetition, else 0"
+  },
+  "runs": [
+    {
+      "name": "base",
+      "path": "results/base_math12k_greedy.jsonl",
+      "exists": true,
+      "count": 500,
+      "accuracy": 0.426,
+      "format_rate": 0.116,
+      "train_reward_v1": 0.395,
+      "diagnostic_score_v2_lite": 0.29990000000000006,
+      "answer_extractable": 0.524,
+      "extract_failure": 0.476,
+      "truncation": 1.0,
+      "repetition": 0.016,
+      "invalid_output_penalty": 1.0
+    },
+    {
+      "name": "grpo_composite",
+      "path": "results/grpo_composite_math12k_greedy.jsonl",
+      "exists": true,
+      "count": 500,
+      "accuracy": 0.458,
+      "format_rate": 0.17,
+      "train_reward_v1": 0.42919999999999997,
+      "diagnostic_score_v2_lite": 0.3351,
+      "answer_extractable": 0.572,
+      "extract_failure": 0.428,
+      "truncation": 0.998,
+      "repetition": 0.012,
+      "invalid_output_penalty": 0.998
+    },
+    {
+      "name": "gspo",
+      "path": "results/gspo_math12k_greedy.jsonl",
+      "exists": true,
+      "count": 500,
+      "accuracy": 0.426,
+      "format_rate": 0.134,
+      "train_reward_v1": 0.3968,
+      "diagnostic_score_v2_lite": 0.30190000000000006,
+      "answer_extractable": 0.528,
+      "extract_failure": 0.472,
+      "truncation": 1.0,
+      "repetition": 0.016,
+      "invalid_output_penalty": 1.0
+    },
+    {
+      "name": "grpo_answer_only",
+      "path": "results/grpo_answer_only_math12k_greedy.jsonl",
+      "exists": true,
+      "count": 500,
+      "accuracy": 0.416,
+      "format_rate": 0.124,
+      "train_reward_v1": 0.38680000000000003,
+      "diagnostic_score_v2_lite": 0.29190000000000005,
+      "answer_extractable": 0.518,
+      "extract_failure": 0.482,
+      "truncation": 1.0,
+      "repetition": 0.014,
+      "invalid_output_penalty": 1.0
+    }
+  ]
+}
